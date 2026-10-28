@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% from "macros.html" import pagination, outcome_badge %}
+{% block title %}Audit trail{% endblock %}
+{% block content %}
+<h1 class="h4">Audit trail</h1>
+<p class="small text-muted">Append-only: entries cannot be edited or deleted through the application (enforced by the application and by database triggers). Secrets are never recorded.</p>
+<form class="row g-2 mb-2" method="get">
+  <div class="col-6 col-md-2"><label class="form-label small mb-0" for="a-start">From</label><input type="datetime-local" class="form-control form-control-sm" id="a-start" name="start" value="{{ args.start }}"></div>
+  <div class="col-6 col-md-2"><label class="form-label small mb-0" for="a-end">To</label><input type="datetime-local" class="form-control form-control-sm" id="a-end" name="end" value="{{ args.end }}"></div>
+  <div class="col-6 col-md-2"><label class="form-label small mb-0" for="a-cat">Category</label><select class="form-select form-select-sm" id="a-cat" name="category"><option value="">All</option>{% for c in categories %}<option {% if args.category == c %}selected{% endif %}>{{ c }}</option>{% endfor %}</select></div>
+  <div class="col-6 col-md-1"><label class="form-label small mb-0" for="a-actor">Actor</label><input class="form-control form-control-sm" id="a-actor" name="actor" value="{{ args.actor }}"></div>
+  <div class="col-6 col-md-1"><label class="form-label small mb-0" for="a-action">Action</label><input class="form-control form-control-sm" id="a-action" name="action" value="{{ args.action }}"></div>
+  <div class="col-6 col-md-2"><label class="form-label small mb-0" for="a-res">Resource</label><input class="form-control form-control-sm" id="a-res" name="resource" value="{{ args.resource }}"></div>
+  <div class="col-6 col-md-1"><label class="form-label small mb-0" for="a-out">Outcome</label><select class="form-select form-select-sm" id="a-out" name="outcome"><option value="">All</option>{% for o in ['success', 'failure', 'denied'] %}<option {% if args.outcome == o %}selected{% endif %}>{{ o }}</option>{% endfor %}</select></div>
+  <div class="col-12 col-md-1 d-flex align-items-end gap-1"><button class="btn btn-sm btn-primary">Filter</button><a class="btn btn-sm btn-outline-secondary" href="{{ url_for('audit.index') }}">Reset</a></div>
+</form>
+<p class="small"><b>{{ total }}</b> events. For Excel/PDF use <a href="{{ url_for('reports.index') }}">Reports → Audit trail</a>.</p>
+<div class="table-responsive"><table class="table table-sm table-striped table-hover bg-white small align-middle">
+  <thead class="table-light"><tr><th>Time</th><th>Actor</th><th>Category</th><th>Action</th><th>Resource</th><th>Outcome</th><th>Reason</th><th>Source IP</th></tr></thead>
+  <tbody>{% for e in rows %}<tr>
+    <td class="text-nowrap"><a href="{{ url_for('audit.detail', event_uid=e.event_uid) }}">{{ e.occurred_at|localtime }}</a></td>
+    <td>{{ e.actor_type }}:{{ e.actor_name }}</td><td>{{ e.category }}</td><td>{{ e.action }}</td>
+    <td>{{ e.resource_type or '' }}{% if e.resource_id %}: {{ e.resource_id }}{% endif %}</td><td>{{ outcome_badge(e.outcome) }}</td>
+    <td>{{ e.reason or '' }}</td><td>{{ e.source_ip or '' }}</td></tr>
+  {% else %}<tr><td colspan="8" class="text-muted">No events.</td></tr>{% endfor %}</tbody>
+</table></div>
+{{ pagination(page, pages, 'audit.index', args) }}
+{% endblock %}

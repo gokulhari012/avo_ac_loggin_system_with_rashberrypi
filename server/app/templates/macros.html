@@ -1,0 +1,53 @@
+{% macro status_badge(status) -%}
+<span class="badge text-bg-{{ status.level }} status-badge" title="{{ status.detail }}">{{ status.icon }} {{ status.label }}</span>
+{%- endmacro %}
+
+{% macro sim_badge(flag) -%}
+{% if flag %}<span class="badge text-bg-info" title="Values come from the simulator, not a real controller">SIMULATED</span>{% endif %}
+{%- endmacro %}
+
+{% macro quality_badge(q) -%}
+{% set m = {'good': ('success', '✓ Good'), 'suspect': ('warning', '! Suspect'), 'probe_fault': ('danger', '⚠ Probe fault'),
+            'invalid': ('danger', '⚠ Invalid'), 'comm_error': ('danger', '✕ Comm error')} %}
+{% set v = m.get(q, ('secondary', q or '—')) %}
+<span class="badge text-bg-{{ v[0] }}">{{ v[1] }}</span>
+{%- endmacro %}
+
+{% macro onoff_badge(value, on_level='primary') -%}
+{% if value is none %}<span class="text-muted">—</span>
+{% elif value %}<span class="badge text-bg-{{ on_level }}">ON</span>
+{% else %}<span class="badge text-bg-light border">OFF</span>{% endif %}
+{%- endmacro %}
+
+{% macro outcome_badge(outcome) -%}
+{% set lv = {'success': 'success', 'failure': 'danger', 'denied': 'warning', 'started': 'secondary'} %}
+<span class="badge text-bg-{{ lv.get(outcome, 'secondary') }}">{{ outcome }}</span>
+{%- endmacro %}
+
+{% macro pagination(page, pages, endpoint, args) -%}
+{% if pages > 1 %}
+<nav aria-label="Pagination"><ul class="pagination pagination-sm flex-wrap">
+  <li class="page-item {% if page <= 1 %}disabled{% endif %}"><a class="page-link" href="{{ url_for(endpoint, page=page-1, **args) }}">‹ Prev</a></li>
+  {% for p in range([1, page-3]|max, [pages, page+3]|min + 1) %}
+  <li class="page-item {% if p == page %}active{% endif %}"><a class="page-link" href="{{ url_for(endpoint, page=p, **args) }}">{{ p }}</a></li>
+  {% endfor %}
+  <li class="page-item {% if page >= pages %}disabled{% endif %}"><a class="page-link" href="{{ url_for(endpoint, page=page+1, **args) }}">Next ›</a></li>
+  <li class="page-item disabled"><span class="page-link">page {{ page }} of {{ pages }}</span></li>
+</ul></nav>
+{% endif %}
+{%- endmacro %}
+
+{% macro field(f, cls='') -%}
+<div class="mb-2 {{ cls }}">
+  {% if f.type == 'BooleanField' %}
+    <div class="form-check">{{ f(class='form-check-input') }} {{ f.label(class='form-check-label') }}</div>
+  {% else %}
+    {{ f.label(class='form-label small fw-semibold mb-0') }}
+    {% if f.type == 'SelectField' %}{{ f(class='form-select form-select-sm' + (' is-invalid' if f.errors else '')) }}
+    {% elif f.type == 'TextAreaField' %}{{ f(class='form-control form-control-sm font-monospace' + (' is-invalid' if f.errors else ''), rows=10) }}
+    {% else %}{{ f(class='form-control form-control-sm' + (' is-invalid' if f.errors else '')) }}{% endif %}
+  {% endif %}
+  {% for e in f.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+  {% if f.description %}<div class="form-text">{{ f.description }}</div>{% endif %}
+</div>
+{%- endmacro %}

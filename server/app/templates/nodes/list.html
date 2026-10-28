@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% from "macros.html" import status_badge, sim_badge %}
+{% block title %}Nodes{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center mb-3 gap-2">
+  <h1 class="h4 mb-0">Nodes</h1>
+  <a class="btn btn-sm btn-outline-secondary ms-auto" href="{{ url_for('nodes.events') }}">Communication events</a>
+  {% if can('manage_nodes') %}<a class="btn btn-sm btn-primary" href="{{ url_for('nodes.register') }}">+ Register node</a>{% endif %}
+</div>
+<div class="table-responsive">
+<table class="table table-sm table-hover align-middle bg-white">
+  <thead class="table-light"><tr><th>Node ID</th><th>Name</th><th>Site / location</th><th>Equipment</th><th>Status</th><th>Last contact</th><th>Controllers</th><th>Config (running / latest)</th><th>Software</th></tr></thead>
+  <tbody>
+  {% for n, st, latest in rows %}
+  <tr>
+    <td><a href="{{ url_for('nodes.detail', node_id=n.id) }}" class="fw-semibold">{{ n.uid }}</a> {{ sim_badge(n.simulation) }}</td>
+    <td>{{ n.name }}</td>
+    <td>{{ n.site }}{% if n.location %} / {{ n.location }}{% endif %}</td>
+    <td>{{ n.equipment }}</td>
+    <td>{{ status_badge(st) }}</td>
+    <td class="text-nowrap">{{ n.last_seen_at|localtime }}</td>
+    <td>{{ n.controllers|selectattr('enabled')|list|length }}</td>
+    <td>
+      v{{ n.reported_config_version if n.reported_config_version is not none else '?' }} / v{{ latest.version if latest else '—' }}
+      {% if latest and latest.status in ('pending', 'delivered') %}<span class="badge text-bg-warning">{{ latest.status }}</span>{% endif %}
+      {% if latest and latest.status == 'rejected' %}<span class="badge text-bg-danger">rejected</span>{% endif %}
+    </td>
+    <td>{{ n.software_version or '—' }}</td>
+  </tr>
+  {% else %}
+  <tr><td colspan="9" class="text-center text-muted py-4">No nodes registered yet.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+
+{% if can('manage_nodes') and discovered %}
+<h2 class="h6 mt-4">Unregistered devices that tried to connect</h2>
+<p class="small text-muted">These devices presented a node ID the server does not know. Their data is NOT accepted. Register a node with the same ID to trust it.</p>
+<table class="table table-sm bg-white">
+  <thead><tr><th>Node ID</th><th>Hostname</th><th>IP</th><th>Software</th><th>First seen</th><th>Last seen</th><th>Attempts</th><th></th></tr></thead>
+  <tbody>
+  {% for d in discovered %}
+  <tr><td>{{ d.uid }}</td><td>{{ d.hostname or '—' }}</td><td>{{ d.last_ip }}</td><td>{{ d.software_version or '—' }}</td>
+      <td>{{ d.first_seen_at|localtime }}</td><td>{{ d.last_seen_at|localtime }}</td><td>{{ d.attempts }}</td>
+      <td><a class="btn btn-sm btn-outline-primary" href="{{ url_for('nodes.register', uid=d.uid) }}">Register…</a></td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}

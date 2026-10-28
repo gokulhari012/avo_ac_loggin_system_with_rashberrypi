@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}{{ node.uid }} config v{{ cv.version }}{% endblock %}
+{% block content %}
+<h1 class="h4">{{ node.uid }} – configuration v{{ cv.version }}</h1>
+<dl class="row small">
+  <dt class="col-sm-2">Created</dt><dd class="col-sm-10">{{ cv.created_at|localtime }} by {{ cv.created_by.username if cv.created_by else 'system' }}</dd>
+  <dt class="col-sm-2">Reason</dt><dd class="col-sm-10">{{ cv.reason or '—' }}</dd>
+  <dt class="col-sm-2">Status</dt><dd class="col-sm-10">{{ cv.status }}{% if cv.delivered_at %} · delivered {{ cv.delivered_at|localtime }}{% endif %}{% if cv.acked_at %} · acknowledged {{ cv.acked_at|localtime }}{% endif %}</dd>
+  {% if cv.ack_errors %}<dt class="col-sm-2">Node errors</dt><dd class="col-sm-10 text-danger">{{ cv.ack_errors }}</dd>{% endif %}
+  {% if cv.ignored_keys %}<dt class="col-sm-2">Ignored by node</dt><dd class="col-sm-10">{{ cv.ignored_keys }}</dd>{% endif %}
+</dl>
+<div class="row g-3">
+  <div class="col-lg-6"><h2 class="h6">This version</h2><pre class="bg-white border p-2 small">{{ cv.config|pretty }}</pre></div>
+  <div class="col-lg-6"><h2 class="h6">Previous version {% if previous %}(v{{ previous.version }}){% endif %}</h2>
+    <pre class="bg-light border p-2 small">{{ previous.config|pretty if previous else 'none' }}</pre></div>
+</div>
+<a href="{{ url_for('nodes.detail', node_id=node.id) }}">← back to node</a>
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Reports{% endblock %}
+{% block content %}
+<h1 class="h4">Reports</h1>
+<p class="text-muted small">Every generated report is recorded in the export history with its filters, record count and a SHA-256 hash of the file.
+Sections are labelled <b>RECORDED</b> (stored as it happened), <b>CALCULATED</b> (derived from recorded readings) or <b>INFERRED</b> (estimated from missing data). No report claims compliance with a regulatory standard.</p>
+<form method="post" action="{{ url_for('reports.generate') }}" class="card card-body" id="report-form">
+  {{ form.hidden_tag() }}
+  <div class="row g-3">
+    <div class="col-md-6 col-xl-4">
+      <label class="form-label fw-semibold" for="r-type">Report</label>
+      <select class="form-select" id="r-type" name="report_type">
+        <option value="temperature_history">Temperature history (opens Data Logs for filtering and export)</option>
+        {% for key, t in types.items() %}<option value="{{ key }}">{{ t.title }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-3 col-xl-2"><label class="form-label fw-semibold" for="r-start">From ({{ display_tz }})</label>
+      <input type="datetime-local" class="form-control" id="r-start" name="start" value="{{ default_start }}" required></div>
+    <div class="col-6 col-md-3 col-xl-2"><label class="form-label fw-semibold" for="r-end">To</label>
+      <input type="datetime-local" class="form-control" id="r-end" name="end" value="{{ default_end }}" required></div>
+    <div class="col-6 col-md-3 col-xl-2"><label class="form-label fw-semibold" for="r-node">Node</label>
+      <select class="form-select" id="r-node" name="node"><option value="">All</option>{% for n in nodes %}<option value="{{ n.id }}">{{ n.label }}</option>{% endfor %}</select></div>
+    <div class="col-6 col-md-3 col-xl-2"><label class="form-label fw-semibold" for="r-controller">Controller</label>
+      <select class="form-select" id="r-controller" name="controller"><option value="">All</option>{% for c in controllers %}<option value="{{ c.id }}">{{ c.node.uid }} / {{ c.label }}</option>{% endfor %}</select></div>
+    <div class="col-6 col-md-3 col-xl-2 report-opt" data-for="excursions"><label class="form-label fw-semibold" for="r-high">High limit °C</label>
+      <input type="number" step="0.1" class="form-control" id="r-high" name="high_c"></div>
+    <div class="col-6 col-md-3 col-xl-2 report-opt" data-for="excursions"><label class="form-label fw-semibold" for="r-low">Low limit °C</label>
+      <input type="number" step="0.1" class="form-control" id="r-low" name="low_c"></div>
+    <div class="col-6 col-md-3 col-xl-2 report-opt" data-for="audit_trail config_changes user_activity"><label class="form-label fw-semibold" for="r-cat">Event category</label>
+      <select class="form-select" id="r-cat" name="category"><option value="">All</option>{% for c in categories %}<option>{{ c }}</option>{% endfor %}</select></div>
+    <div class="col-6 col-md-3 col-xl-2 report-opt" data-for="audit_trail user_activity export_activity"><label class="form-label fw-semibold" for="r-actor">User / actor</label>
+      <input class="form-control" id="r-actor" name="actor" maxlength="64"></div>
+    <div class="col-6 col-md-3 col-xl-2 report-opt" data-for="audit_trail user_activity"><label class="form-label fw-semibold" for="r-outcome">Outcome</label>
+      <select class="form-select" id="r-outcome" name="outcome"><option value="">All</option><option>success</option><option>failure</option><option>denied</option></select></div>
+    <div class="col-12 d-flex gap-2 align-items-center">
+      <button class="btn btn-success" name="format" value="xlsx" type="submit">Generate Excel</button>
+      <button class="btn btn-danger" name="format" value="pdf" type="submit">Generate PDF</button>
+      <span class="small text-muted ms-2" id="report-help"></span>
+    </div>
+  </div>
+</form>
+<div class="row g-3 mt-1 small">
+  <div class="col-md-6 col-xl-3"><div class="card card-body h-100"><b>Excursions</b> Periods above/below limits you enter, from recorded readings. Gaps inside an excursion are flagged.</div></div>
+  <div class="col-md-6 col-xl-3"><div class="card card-body h-100"><b>Faults</b> Fault and alarm periods from the controller's fault register (Ht, Lt, door, compressor, probe).</div></div>
+  <div class="col-md-6 col-xl-3"><div class="card card-body h-100"><b>Downtime</b> Node downtime inferred from missing heartbeats, plus recorded communication events.</div></div>
+  <div class="col-md-6 col-xl-3"><div class="card card-body h-100"><b>Missing data</b> Gaps between readings and periods without a valid temperature.</div></div>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/reports.js') }}"></script>{% endblock %}

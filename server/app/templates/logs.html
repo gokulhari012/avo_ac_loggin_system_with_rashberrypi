@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% from "macros.html" import quality_badge, onoff_badge, pagination, sim_badge %}
+{% block title %}Data logs{% endblock %}
+{% block content %}
+<h1 class="h4">Data logs</h1>
+<form method="get" class="card card-body py-2 mb-3 filter-form" id="log-filters">
+  <div class="row g-2">
+    <div class="col-6 col-md-3 col-xl-2"><label class="form-label small mb-0" for="f-start">From ({{ display_tz }})</label>
+      <input type="datetime-local" class="form-control form-control-sm" id="f-start" name="start" value="{{ args.start or '' }}"></div>
+    <div class="col-6 col-md-3 col-xl-2"><label class="form-label small mb-0" for="f-end">To</label>
+      <input type="datetime-local" class="form-control form-control-sm" id="f-end" name="end" value="{{ args.end or '' }}"></div>
+    <div class="col-6 col-md-3 col-xl-2"><label class="form-label small mb-0" for="f-node">Node</label>
+      <select class="form-select form-select-sm" id="f-node" name="node"><option value="">All</option>
+      {% for n in options.nodes %}<option value="{{ n.id }}" {% if f.node_id == n.id %}selected{% endif %}>{{ n.label }}</option>{% endfor %}</select></div>
+    <div class="col-6 col-md-3 col-xl-2"><label class="form-label small mb-0" for="f-controller">Controller</label>
+      <select class="form-select form-select-sm" id="f-controller" name="controller"><option value="">All</option>
+      {% for c in options.controllers %}<option value="{{ c.id }}" {% if f.controller_id == c.id %}selected{% endif %}>{{ c.node.uid }} / {{ c.label }}</option>{% endfor %}</select></div>
+    <div class="col-6 col-md-3 col-xl-2"><label class="form-label small mb-0" for="f-site">Site</label>
+      <select class="form-select form-select-sm" id="f-site" name="site"><option value="">All</option>
+      {% for s in options.sites %}<option {% if f.site == s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select></div>
+    <div class="col-6 col-md-3 col-xl-2"><label class="form-label small mb-0" for="f-equipment">Equipment</label>
+      <select class="form-select form-select-sm" id="f-equipment" name="equipment"><option value="">All</option>
+      {% for s in options.equipment %}<option {% if f.equipment == s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select></div>
+    <div class="col-6 col-md-2 col-xl-1"><label class="form-label small mb-0" for="f-min">Min °C</label>
+      <input type="number" step="0.1" class="form-control form-control-sm" id="f-min" name="min_temp" value="{{ args.min_temp or '' }}"></div>
+    <div class="col-6 col-md-2 col-xl-1"><label class="form-label small mb-0" for="f-max">Max °C</label>
+      <input type="number" step="0.1" class="form-control form-control-sm" id="f-max" name="max_temp" value="{{ args.max_temp or '' }}"></div>
+    <div class="col-6 col-md-3 col-xl-2"><label class="form-label small mb-0" for="f-fault">Fault status</label>
+      <select class="form-select form-select-sm" id="f-fault" name="fault"><option value="">Any</option>
+        <option value="any" {% if f.fault == 'any' %}selected{% endif %}>With any fault</option>
+        <option value="none" {% if f.fault == 'none' %}selected{% endif %}>Without faults</option>
+        {% for k, v in options.faults.items() %}<option value="{{ k }}" {% if f.fault == k %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></div>
+    <div class="col-6 col-md-3 col-xl-2"><label class="form-label small mb-0" for="f-comm">Communication</label>
+      <select class="form-select form-select-sm" id="f-comm" name="comm"><option value="">Any</option>
+      {% for k, v in options.comm.items() %}<option value="{{ k }}" {% if f.comm == k %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></div>
+    <div class="col-4 col-md-2 col-xl-1"><label class="form-label small mb-0" for="f-comp">Compressor</label>
+      <select class="form-select form-select-sm" id="f-comp" name="compressor"><option value="">Any</option>
+        <option value="on" {% if f.compressor == 'on' %}selected{% endif %}>ON</option><option value="off" {% if f.compressor == 'off' %}selected{% endif %}>OFF</option></select></div>
+    <div class="col-4 col-md-2 col-xl-1"><label class="form-label small mb-0" for="f-alarm">Alarm</label>
+      <select class="form-select form-select-sm" id="f-alarm" name="alarm"><option value="">Any</option>
+        <option value="on" {% if f.alarm == 'on' %}selected{% endif %}>ON</option><option value="off" {% if f.alarm == 'off' %}selected{% endif %}>OFF</option></select></div>
+    <div class="col-4 col-md-2 col-xl-1"><label class="form-label small mb-0" for="f-quality">Quality</label>
+      <select class="form-select form-select-sm" id="f-quality" name="quality"><option value="">Any</option>
+      {% for k, v in options.quality.items() %}<option value="{{ k }}" {% if f.quality == k %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></div>
+    <div class="col-6 col-md-2 col-xl-1"><label class="form-label small mb-0" for="f-source">Source</label>
+      <select class="form-select form-select-sm" id="f-source" name="source"><option value="">Any</option>
+        <option value="controller" {% if f.source == 'controller' %}selected{% endif %}>Controller</option><option value="simulated" {% if f.source == 'simulated' %}selected{% endif %}>Simulated</option></select></div>
+    <div class="col-6 col-md-2 col-xl-1"><label class="form-label small mb-0" for="f-ingest">Ingestion</label>
+      <select class="form-select form-select-sm" id="f-ingest" name="ingest"><option value="">Any</option>
+        <option value="live" {% if f.ingest == 'live' %}selected{% endif %}>Live</option><option value="backfilled" {% if f.ingest == 'backfilled' %}selected{% endif %}>Backfilled</option></select></div>
+    <div class="col-6 col-md-2 col-xl-2"><label class="form-label small mb-0" for="f-sort">Sort by</label>
+      <select class="form-select form-select-sm" id="f-sort" name="sort">{% for k, v in options.sorts.items() %}<option value="{{ k }}" {% if f.sort == k %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></div>
+    <div class="col-6 col-md-2 col-xl-2"><label class="form-label small mb-0" for="f-dir">Order</label>
+      <select class="form-select form-select-sm" id="f-dir" name="dir"><option value="desc" {% if f.direction == 'desc' %}selected{% endif %}>Descending</option><option value="asc" {% if f.direction == 'asc' %}selected{% endif %}>Ascending</option></select></div>
+    <div class="col-6 col-md-2 col-xl-1"><label class="form-label small mb-0" for="f-pp">Per page</label>
+      <select class="form-select form-select-sm" id="f-pp" name="per_page">{% for n in options.page_sizes %}<option {% if per_page == n %}selected{% endif %}>{{ n }}</option>{% endfor %}</select></div>
+    <div class="col-12 col-xl-4 d-flex align-items-end gap-2">
+      <button class="btn btn-sm btn-primary" type="submit">Apply filters</button>
+      <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('logs.index') }}">Reset all</a>
+    </div>
+  </div>
+</form>
+
+{% for e in f.errors %}<div class="alert alert-danger py-1">{{ e }}</div>{% endfor %}
+
+<div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+  <strong>{{ "{:,}".format(total) }} matching record{{ '' if total == 1 else 's' }}</strong>
+  {% for label, value in f.describe() %}<span class="badge rounded-pill text-bg-light border filter-chip">{{ label }}: {{ value }}</span>{% endfor %}
+  <a class="small ms-1" href="{{ url_for('logs.index', **refresh_args) }}" title="Include data received since this page was opened">Refresh data</a>
+  {% if can('export_data') %}
+  <div class="ms-auto d-flex gap-2">
+    {% for fmt, label in [('xlsx', 'Export Excel'), ('pdf', 'Export PDF')] %}
+    <form method="post" action="{{ url_for('logs.export', fmt=fmt) }}" class="d-inline">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      {% for k, v in args.items() %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
+      {% if fmt == 'xlsx' %}<label class="small me-1"><input type="checkbox" name="include_raw" value="1"> raw registers</label>{% endif %}
+      <button class="btn btn-sm btn-outline-success" type="submit" {% if not total %}disabled{% endif %}>{{ label }}</button>
+    </form>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+<p class="small text-muted mb-2">This view is frozen at data received up to {{ f.as_of|localtime }}; exports from this page contain exactly these {{ "{:,}".format(total) }} records (chronological). Empty temperature = no valid value (never estimated).</p>
+
+<div class="table-responsive">
+<table class="table table-sm table-striped table-hover align-middle bg-white small">
+  <thead class="table-light"><tr><th>Time ({{ display_tz }})</th><th>Node</th><th>Controller</th><th class="text-end">Temp °C</th><th class="text-end">SP °C</th><th>Comp</th><th>Alarm</th><th>Defrost</th><th>Faults</th><th>Comm</th><th>Quality</th><th>Source</th></tr></thead>
+  <tbody>
+  {% for r, node_uid, node_name, site, equipment, ctrl_uid, ctrl_name in rows %}
+    <tr>
+      <td class="text-nowrap" title="UTC {{ r.acquired_at|isoutc }}; received {{ r.received_at|localtime }}">{{ r.acquired_at|localtime }}{% if r.backfilled %} <span class="badge text-bg-secondary" title="Delivered late from the node's local buffer">buffered</span>{% endif %}</td>
+      <td>{{ node_uid }}</td>
+      <td>{{ ctrl_name or ctrl_uid }}</td>
+      <td class="text-end fw-semibold">{{ '%.1f'|format(r.temperature_c) if r.temperature_c is not none else '—' }}</td>
+      <td class="text-end">{{ '%.1f'|format(r.setpoint_c) if r.setpoint_c is not none else '—' }}</td>
+      <td>{{ onoff_badge(r.compressor_on) }}</td>
+      <td>{{ onoff_badge(r.alarm_on, 'danger') }}</td>
+      <td>{{ onoff_badge(r.defrost_active, 'info') }}</td>
+      <td>{% for code in r.faults %}<span class="badge text-bg-danger">{{ code }}</span> {% endfor %}</td>
+      <td>{% if r.comm_status == 'ok' %}<span class="text-success">ok</span>{% else %}<span class="badge text-bg-danger" title="{{ r.comm_error or '' }}">{{ r.comm_status }}</span>{% endif %}</td>
+      <td>{{ quality_badge(r.quality) }}{% for fl in r.flags %} <span class="badge text-bg-light border" title="quality flag">{{ fl }}</span>{% endfor %}</td>
+      <td>{{ sim_badge(r.source == 'simulated') or r.source }}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="12" class="text-center text-muted py-4">No records match the selected filters.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{{ pagination(page, pages, 'logs.index', dict(args, per_page=per_page)) }}
+{% endblock %}

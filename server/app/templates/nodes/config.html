@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% from "macros.html" import field %}
+{% block title %}{{ 'Register node' if register else 'Configure ' ~ node.uid }}{% endblock %}
+{% block content %}
+<h1 class="h4">{% if register %}Register a node{% else %}Configure node {{ node.uid }}{% endif %}</h1>
+{% if register %}
+<p class="text-muted small">Registration creates the node's identity and a one-time access token, plus configuration version 1. Copy the token to the Raspberry Pi as described on the next page.</p>
+{% else %}
+<p class="text-muted small">Saving creates a new configuration version{% if latest %} (current latest: v{{ latest.version }}, {{ latest.status }}){% endif %}. The node fetches it, validates it, and either applies it or rejects it and keeps its last working configuration. Its answer appears on the node page.</p>
+{% endif %}
+<form method="post" novalidate>
+  {{ form.hidden_tag() }}
+  <div class="row g-3">
+    <div class="col-xl-6">
+      <div class="card mb-3"><div class="card-header py-2">Identity and location</div><div class="card-body">
+        <div class="row">
+          {% if register %}<div class="col-md-6">{{ field(form.uid) }}</div>{% endif %}
+          <div class="col-md-6">{{ field(form.name) }}</div>
+          <div class="col-md-12">{{ field(form.description) }}</div>
+          <div class="col-md-4">{{ field(form.site) }}</div>
+          <div class="col-md-4">{{ field(form.location) }}</div>
+          <div class="col-md-4">{{ field(form.equipment) }}</div>
+        </div>
+      </div></div>
+      <div class="card mb-3"><div class="card-header py-2">Server connection and timing</div><div class="card-body">
+        <div class="row">
+          <div class="col-12">{{ field(form.server_url) }}</div>
+          <div class="col-md-4">{{ field(form.upload_interval_s) }}</div>
+          <div class="col-md-4">{{ field(form.batch_size) }}</div>
+          <div class="col-md-4">{{ field(form.heartbeat_interval_s) }}</div>
+          <div class="col-md-4">{{ field(form.config_sync_interval_s) }}</div>
+          <div class="col-md-4">{{ field(form.request_timeout_s) }}</div>
+          <div class="col-md-4">{{ field(form.backoff_max_s) }}</div>
+        </div>
+      </div></div>
+      <div class="card mb-3"><div class="card-header py-2">Local buffer and logging</div><div class="card-body">
+        <div class="row">
+          <div class="col-md-6">{{ field(form.retention_days_delivered) }}</div>
+          <div class="col-md-6">{{ field(form.max_pending_records) }}</div>
+          <div class="col-md-6">{{ field(form.full_behavior) }}</div>
+          <div class="col-md-6">{{ field(form.min_free_disk_mb) }}</div>
+          <div class="col-md-6">{{ field(form.log_level) }}</div>
+          <div class="col-md-6 pt-4">{{ field(form.diagnostic_registers) }}</div>
+        </div>
+      </div></div>
+    </div>
+    <div class="col-xl-6">
+      <div class="card mb-3"><div class="card-header py-2">RS-485 / Modbus RTU (SZ-7526TX-REA: 8 data bits, 1 stop bit)</div><div class="card-body">
+        <div class="alert alert-warning small py-2">The register map does not document factory defaults for baud rate, parity or device ID. Use the values set in the controller (parameters <b>bd</b>, <b>PAr</b>, <b>did</b>).</div>
+        <div class="row">
+          <div class="col-md-4">{{ field(form.bus_name) }}</div>
+          <div class="col-md-8">{{ field(form.port) }}</div>
+          <div class="col-md-4">{{ field(form.baudrate) }}</div>
+          <div class="col-md-4">{{ field(form.parity) }}</div>
+          <div class="col-md-4">{{ field(form.timeout_s) }}</div>
+          <div class="col-md-6">{{ field(form.retries) }}</div>
+          <div class="col-md-6">{{ field(form.inter_request_delay_ms) }}</div>
+        </div>
+      </div></div>
+      <div class="card mb-3"><div class="card-header py-2">Controllers on this bus</div><div class="card-body p-2">
+        <div class="table-responsive"><table class="table table-sm align-middle mb-1">
+          <thead><tr><th>ID</th><th>Name</th><th>Slave ID</th><th>Poll (s)</th><th>Params (s)</th><th title="Address offset (0 = documented convention)">Offset</th><th>Read</th><th>On</th></tr></thead>
+          <tbody>
+          {% for entry in form.controllers %}
+            <tr>
+              <td>{{ entry.form.uid(class='form-control form-control-sm', placeholder='add…') }}{% for e in entry.form.uid.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}</td>
+              <td>{{ entry.form.name(class='form-control form-control-sm') }}</td>
+              <td>{{ entry.form.slave_id(class='form-control form-control-sm', min=1, max=250) }}{% for e in entry.form.slave_id.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}</td>
+              <td>{{ entry.form.poll_interval_s(class='form-control form-control-sm') }}</td>
+              <td>{{ entry.form.parameter_read_interval_s(class='form-control form-control-sm') }}</td>
+              <td>{{ entry.form.address_offset(class='form-select form-select-sm') }}</td>
+              <td>{{ entry.form.read_strategy(class='form-select form-select-sm') }}</td>
+              <td>{{ entry.form.enabled(class='form-check-input') }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table></div>
+        <div class="form-text">Fill the empty last row to add a controller (save, then edit again to add another). Clear a row's ID to remove that controller from the node; its history is kept. Change <i>address offset</i> only if the hardware validation tool proved it necessary.</div>
+      </div></div>
+      <details class="card mb-3"><summary class="card-header py-2">Advanced: full configuration JSON (multiple buses)</summary><div class="card-body">
+        {{ field(form.advanced_json) }}
+      </div></details>
+    </div>
+  </div>
+  <div class="card card-body mb-3">
+    <div class="row align-items-end">
+      <div class="col-md-8">{{ field(form.reason) }}</div>
+      <div class="col-md-4 text-end">
+        <a class="btn btn-outline-secondary" href="{{ url_for('nodes.detail', node_id=node.id) if node else url_for('nodes.index') }}">Cancel</a>
+        <button class="btn btn-primary" type="submit">{{ 'Register node' if register else 'Save as new version' }}</button>
+      </div>
+    </div>
+  </div>
+</form>
+{% endblock %}

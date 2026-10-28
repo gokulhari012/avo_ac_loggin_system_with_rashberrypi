@@ -1,0 +1,11 @@
+# Raspberry Pi node runtime dependencies (pinned).
+# pymodbus 3.11.x API: read_* / write_* take `device_id=` (renamed from `slave=` in 3.10).
+# Do not upgrade pymodbus without re-running tests/test_modbus_client.py.
+pymodbus==3.11.3
+pyserial==3.5
+requests==2.32.3
+urllib3==2.2.3
+certifi==2024.8.30
+idna==3.10
+charset-normalizer==3.4.0
+PyYAML==6.0.2

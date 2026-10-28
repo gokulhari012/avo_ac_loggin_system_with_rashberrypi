@@ -1,0 +1,32 @@
+[Unit]
+Description=Temperature monitoring node (SZ-7526TX-REA Modbus RTU -> central server)
+Documentation=file:///opt/temperature-node/docs/installation-raspberry-pi.md
+After=network-online.target time-sync.target
+Wants=network-online.target
+
+[Service]
+Type=notify
+NotifyAccess=main
+User=tempnode
+Group=tempnode
+SupplementaryGroups=dialout
+WorkingDirectory=/opt/temperature-node/raspberry_pi_node
+EnvironmentFile=-/etc/temperature-node/node.env
+ExecStart=/opt/temperature-node/venv/bin/python -m src.main --config /etc/temperature-node/config.yaml
+Restart=always
+RestartSec=5
+# The node pings the watchdog every 15 s while all worker threads are alive.
+WatchdogSec=120
+TimeoutStopSec=90
+
+# Hardening: the service can only write its state and log directories.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/temperature-node /var/log/temperature-node
+ProtectKernelTunables=true
+ProtectControlGroups=true
+
+[Install]
+WantedBy=multi-user.target

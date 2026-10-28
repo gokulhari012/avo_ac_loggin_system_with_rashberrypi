@@ -1,0 +1,93 @@
+# Temperature node configuration (copy to /etc/temperature-node/config.yaml).
+#
+# This LOCAL file holds identity, the server credential, paths and safety
+# switches.  Operational settings (node details, server.url, intervals, buses,
+# controllers, buffer limits, log level) may later be overridden by versioned
+# configuration pushed from the server; the active version is stored in
+# <state_dir>/remote_config.json.  Validate with:
+#     python -m src.main --config /etc/temperature-node/config.yaml --check-config
+
+node:
+  id: NODE-001                 # must match the node ID registered on the server
+  name: Cold Room Node 1
+  description: ""
+  site: Plant A
+  location: Building 2
+  equipment: Cold Room 1
+
+server:
+  url: http://192.168.1.10:8000      # Windows server; use https:// behind a TLS proxy (docs/installation-windows.md)
+  # Token shown ONCE when the node is registered on the server.  Prefer the
+  # environment variable TEMP_NODE_TOKEN (set in /etc/temperature-node/node.env)
+  # so the secret is not in this file.
+  token: null
+  verify_tls: true
+  ca_bundle: null                    # path to a CA certificate for an internal/self-signed HTTPS server
+  request_timeout_s: 10
+  upload_interval_s: 5               # how often queued readings are sent when there is no backlog
+  batch_size: 200                    # readings per upload request (max 1000)
+  heartbeat_interval_s: 30
+  config_sync_interval_s: 60
+  backoff_initial_s: 2               # retry delay after a failed upload, doubled each time...
+  backoff_max_s: 300                 # ...up to this maximum
+
+# One entry per physical RS-485 port.  Controllers on the same port share
+# these serial settings and are polled one at a time (half duplex).
+#
+# IMPORTANT: the register map does not document factory defaults for the
+# controller's baud rate (bd), parity (PAr) or device ID (did) - they show "-".
+# The values below are software defaults only.  Read the real values from the
+# controller's Program Mode and set them here, or use
+#     python -m src.validate_controller --port /dev/ttyUSB0 --scan
+buses:
+  - name: rs485-1
+    port: /dev/ttyUSB0               # USB RS-485 adapter; /dev/serial0 for a HAT on the GPIO UART
+    baudrate: 9600                   # 9600 | 19200 | 38400  (controller parameter bd = 1 | 2 | 3)
+    parity: N                        # N | E | O             (controller parameter PAr = 0 | 1 | 2)
+    bytesize: 8                      # fixed by the controller
+    stopbits: 1                      # fixed by the controller
+    timeout_s: 1.0                   # response timeout per request
+    retries: 2                       # extra attempts after a failed request
+    inter_request_delay_ms: 50       # silent time between requests on the bus
+
+controllers:
+  - id: ctrl-1                       # unique within this node
+    name: Cold Room 1 Controller
+    model: SZ-7526TX-REA
+    bus: rs485-1
+    slave_id: 1                      # controller parameter did (1-250; 0 disables communication)
+    enabled: true
+    poll_interval_s: 10
+    parameter_read_interval_s: 3600  # read 40031-40068 for the audit trail (0 = never)
+    include_raw_registers: true      # send raw register values with every reading
+    comm_loss_threshold: 3           # consecutive failed polls before "communication lost"
+    register_overrides:
+      address_offset: 0              # change ONLY if hardware validation proves an off-by-one
+      read_strategy: auto            # auto | block | segments
+
+buffer:
+  path: /var/lib/temperature-node/queue.db
+  retention_days_delivered: 7        # keep delivered records locally for this long
+  max_pending_records: 2000000       # ~230 days of one controller at 10 s polling
+  full_behavior: drop_oldest         # drop_oldest | stop_collecting  (both report a data_gap event)
+  min_free_disk_mb: 100
+
+logging:
+  level: INFO                        # DEBUG | INFO | WARNING | ERROR
+  file: /var/log/temperature-node/node.log
+  format: text                       # text | json
+  max_bytes: 5000000
+  backup_count: 10
+  diagnostic_registers: false        # log raw + decoded registers for every poll
+
+safety:
+  # Allow alarm mute / fault reset / log reset / defrost commands from the
+  # server.  Can ONLY be enabled here, never remotely.  Keep false unless the
+  # site has approved remote control.
+  allow_remote_control: false
+
+state_dir: /var/lib/temperature-node
+
+# true ONLY when polling the simulator (simulator/mock_controller.py).
+# Every reading is then labelled "simulated" on the server.
+simulation: false

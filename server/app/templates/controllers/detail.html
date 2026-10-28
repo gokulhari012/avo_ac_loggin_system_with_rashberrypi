@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% from "macros.html" import status_badge, sim_badge, onoff_badge, quality_badge, field %}
+{% block title %}{{ ctrl.label }}{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+  <h1 class="h4 mb-0">{{ ctrl.label }} <small class="text-muted">{{ node.uid }}/{{ ctrl.uid }}</small></h1>
+  {{ status_badge(snapshot.status) }} {{ sim_badge(snapshot.simulated) }}
+  <a class="btn btn-sm btn-outline-primary ms-auto" href="{{ url_for('monitor.index', controller=ctrl.id) }}">Trend</a>
+  <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('logs.index', controller=ctrl.id) }}">Data logs</a>
+  <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('nodes.detail', node_id=node.id) }}">Node</a>
+</div>
+{% if snapshot.status.detail %}<p class="small text-muted">{{ snapshot.status.detail }}</p>{% endif %}
+
+<div class="row g-3">
+  <div class="col-lg-5">
+    <div class="card"><div class="card-header py-2">Latest reading {% if latest %}<small class="text-muted">{{ latest.acquired_at|localtime }}</small>{% endif %}</div>
+      <div class="card-body small">
+      {% if latest %}
+        <dl class="row mb-0">
+          <dt class="col-6">Control (display) temperature</dt><dd class="col-6 fw-semibold">{{ latest.temperature_c|temp }}</dd>
+          <dt class="col-6">Actual temperature (40008)</dt><dd class="col-6">{{ latest.actual_temperature_c|temp }}</dd>
+          <dt class="col-6">Set point</dt><dd class="col-6">{{ latest.setpoint_c|temp }}</dd>
+          <dt class="col-6">Resolution (rS)</dt><dd class="col-6">{{ {0: '0 → 0.1 °C', 1: '1 → 1 °C'}.get(latest.resolution_rs, '—') }}</dd>
+          <dt class="col-6">Compressor / alarm / defrost</dt><dd class="col-6">{{ onoff_badge(latest.compressor_on) }} {{ onoff_badge(latest.alarm_on, 'danger') }} {{ onoff_badge(latest.defrost_active, 'info') }}</dd>
+          <dt class="col-6">Faults</dt><dd class="col-6">{% for f in latest.faults %}<span class="badge text-bg-danger">{{ f }}</span> {% else %}none{% endfor %}</dd>
+          <dt class="col-6">Keypad locked</dt><dd class="col-6">{{ latest.keypad_locked|onoff('yes', 'no') }}</dd>
+          <dt class="col-6">Log high / low</dt><dd class="col-6">{{ latest.temp_log_high_c|temp }} / {{ latest.temp_log_low_c|temp }}</dd>
+          <dt class="col-6">Compressor run hours</dt><dd class="col-6">{{ latest.compressor_run_hours if latest.compressor_run_hours is not none else '—' }}</dd>
+          <dt class="col-6">Communication</dt><dd class="col-6">{{ latest.comm_status }}{% if latest.comm_error %}: {{ latest.comm_error }}{% endif %}</dd>
+          <dt class="col-6">Quality</dt><dd class="col-6">{{ quality_badge(latest.quality) }} {{ latest.quality_flags }}</dd>
+          {% set ex = latest.extra %}
+          {% if ex.get('warnings') %}<dt class="col-6">Decoder warnings</dt><dd class="col-6 text-warning">{{ ex.warnings|join('; ') }}</dd>{% endif %}
+          {% if ex.get('delays') %}<dt class="col-6">Delays in progress</dt><dd class="col-6">{{ ex.delays.items()|selectattr(1)|map(attribute=0)|join(', ') or 'none' }}</dd>{% endif %}
+          <dt class="col-6">Reading ID</dt><dd class="col-6"><code>{{ latest.reading_uid }}</code></dd>
+        </dl>
+        {% if latest.raw %}
+        <details class="mt-2"><summary>Raw registers (as received)</summary>
+          <table class="table table-sm small mb-0"><tbody>{% for k, v in latest.raw|dictsort %}<tr><td>{{ k }}</td><td>{{ v }}</td><td class="text-muted">{{ v - 65536 if v > 32767 else v }} signed</td></tr>{% endfor %}</tbody></table>
+        </details>
+        {% endif %}
+      {% else %}<p class="text-muted mb-0">No reading received yet.</p>{% endif %}
+      </div></div>
+
+    <div class="card mt-3"><div class="card-header py-2">Configuration (server)</div><div class="card-body small">
+      Model {{ ctrl.model }} · bus {{ ctrl.bus_name or '—' }} · slave ID {{ ctrl.slave_id or '—' }} · poll every {{ ctrl.poll_interval_s or '—' }} s
+      {% if ctrl.auto_registered %}<div class="alert alert-warning py-1 mt-2 mb-0">This controller sent data but is not in the server's node configuration. Add it via <a href="{{ url_for('nodes.edit_config', node_id=node.id) }}">Edit configuration</a>.</div>{% endif %}
+    </div></div>
+
+    {% if can('manage_nodes') or can('control_controllers') %}
+    <div class="card mt-3 border-warning"><div class="card-header py-2">Controller commands</div><div class="card-body small">
+      <p class="mb-2">Read-only checks are always available. Write commands (alarm mute, fault reset, log reset, defrost) need: the <b>control_controllers</b> permission,
+        the system setting <i>Allow controller commands</i> (currently <b>{{ 'ON' if remote_control else 'OFF' }}</b>), and <code>safety.allow_remote_control: true</code> in the node's local file.
+        Parameter registers 40031-40068 are never written remotely.</p>
+      <form method="post" action="{{ url_for('nodes.controller_command', controller_id=ctrl.id) }}" novalidate>
+        {{ form.hidden_tag() }}
+        {{ field(form.command) }}
+        {{ field(form.reason) }}
+        {{ field(form.confirm) }}
+        <div class="form-text mb-2">Type <code>{{ ctrl.uid }}</code> to confirm.</div>
+        <button class="btn btn-sm btn-warning" type="submit">Queue command</button>
+      </form>
+    </div></div>
+    {% endif %}
+  </div>
+
+  <div class="col-lg-7">
+    <div class="card"><div class="card-header py-2">Device parameters 40031-40068 {% if ctrl.parameters_read_at %}<small class="text-muted">read {{ ctrl.parameters_read_at|localtime }}</small>{% endif %}</div>
+      <div class="card-body p-0"><div class="table-responsive scroll-400"><table class="table table-sm small mb-0">
+        <thead><tr><th>Reg.</th><th>Code</th><th>Value</th><th>Description</th></tr></thead>
+        <tbody>{% for code, p in ctrl.parameters.items()|sort(attribute='1.reference') %}
+          <tr><td>{{ p.reference }}</td><td>{{ code }}</td><td>{% if p.redacted %}<span class="text-muted">[not recorded]</span>{% else %}{{ p.value }} {{ p.unit }}{% if p.label %} <span class="text-muted">({{ p.label }})</span>{% endif %}{% endif %}</td><td>{{ p.description }}</td></tr>
+        {% else %}<tr><td colspan="4" class="text-muted p-2">No parameter snapshot yet (the node reads them every parameter_read_interval_s).</td></tr>{% endfor %}</tbody>
+      </table></div></div></div>
+
+    <div class="card mt-3"><div class="card-header py-2">Configuration history</div><div class="card-body p-0"><div class="table-responsive scroll-300">
+      <table class="table table-sm small mb-0"><thead><tr><th>Recorded</th><th>Source</th><th>Actor</th><th>Changed</th><th>Previous</th><th>Reason</th></tr></thead>
+      <tbody>{% for h in history %}<tr><td class="text-nowrap">{{ h.recorded_at|localtime }}</td><td>{{ h.source }}</td><td>{{ h.actor }}</td><td>{{ h.changed_keys }}</td><td><code>{{ (h.previous_json or '')[:200] }}</code></td><td>{{ h.reason }}</td></tr>
+      {% else %}<tr><td colspan="6" class="text-muted p-2">None.</td></tr>{% endfor %}</tbody></table></div></div></div>
+
+    <div class="card mt-3"><div class="card-header py-2">Fault and alarm periods</div><div class="card-body p-0"><div class="table-responsive scroll-300">
+      <table class="table table-sm small mb-0"><thead><tr><th>Kind</th><th>Code</th><th>Started</th><th>Cleared</th><th>Status</th></tr></thead>
+      <tbody>{% for f in faults %}<tr><td>{{ f.kind }}</td><td>{{ f.description }}</td><td>{{ f.started_at|localtime }}</td><td>{{ f.cleared_at|localtime }}</td>
+        <td><span class="badge text-bg-{{ 'danger' if f.status == 'active' else 'secondary' }}">{{ f.status }}</span></td></tr>
+      {% else %}<tr><td colspan="5" class="text-muted p-2">None.</td></tr>{% endfor %}</tbody></table></div></div></div>
+
+    <div class="card mt-3"><div class="card-header py-2">Commands</div><div class="card-body p-0">
+      <table class="table table-sm small mb-0"><thead><tr><th>Requested</th><th>By</th><th>Command</th><th>Reason</th><th>Status</th><th>Result</th></tr></thead>
+      <tbody>{% for c in commands %}<tr><td>{{ c.requested_at|localtime }}</td><td>{{ c.requested_by.username if c.requested_by else '' }}</td><td>{{ c.command }}</td><td>{{ c.reason }}</td><td>{{ c.status }}</td><td><code>{{ (c.result_json or '')[:200] }}</code></td></tr>
+      {% else %}<tr><td colspan="6" class="text-muted p-2">None.</td></tr>{% endfor %}</tbody></table></div></div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% from "macros.html" import field %}
+{% block title %}{{ 'Edit ' ~ user.username if user else 'New user' }}{% endblock %}
+{% block content %}
+<h1 class="h4">{{ 'Edit user ' ~ user.username if user else 'New user' }}</h1>
+<div class="row"><div class="col-md-8 col-lg-5">
+<form method="post" novalidate class="card card-body">
+  {{ form.hidden_tag() }}
+  {{ field(form.username) }}
+  {{ field(form.full_name) }}
+  {{ field(form.email) }}
+  {{ field(form.role_id) }}
+  {{ field(form.is_active) }}
+  {{ field(form.password) }}
+  <div class="form-text mb-2">Minimum {{ config.PASSWORD_MIN_LENGTH }} characters, mixing letters with digits or symbols. Changing role, status or password signs the user out everywhere.</div>
+  {{ field(form.reason) }}
+  <div class="d-flex gap-2"><button class="btn btn-primary" type="submit">Save</button><a class="btn btn-outline-secondary" href="{{ url_for('admin.users') }}">Cancel</a></div>
+</form>
+</div></div>
+{% endblock %}

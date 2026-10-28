@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+
+# Local runtime data (never commit databases, logs, or secrets)
+server/instance/
+server/.env
+server/logs/
+*.db
+*.db-wal
+*.db-shm
+*.log
+raspberry_pi_node/config.yaml
+raspberry_pi_node/state/
+simulator/run/
+backups/
+
+# Editors / OS
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store

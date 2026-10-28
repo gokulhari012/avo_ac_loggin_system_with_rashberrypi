@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Users{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center mb-3"><h1 class="h4 mb-0">Users</h1>
+  <a class="btn btn-sm btn-primary ms-auto" href="{{ url_for('admin.user_form') }}">+ New user</a></div>
+<p class="small text-muted">Users are deactivated rather than deleted so the audit trail stays attributable.</p>
+<table class="table table-sm table-hover bg-white align-middle">
+  <thead class="table-light"><tr><th>Username</th><th>Name</th><th>Role</th><th>Status</th><th>Last login</th><th>Created</th></tr></thead>
+  <tbody>{% for u in users %}<tr>
+    <td><a href="{{ url_for('admin.user_form', user_id=u.id) }}">{{ u.username }}</a></td><td>{{ u.full_name }}</td><td>{{ u.role.name }}</td>
+    <td>{% if not u.is_active_flag %}<span class="badge text-bg-secondary">inactive</span>{% elif u.locked_until and u.locked_until > now %}<span class="badge text-bg-warning">locked</span>{% else %}<span class="badge text-bg-success">active</span>{% endif %}</td>
+    <td>{{ u.last_login_at|localtime }}</td><td>{{ u.created_at|localtime('%Y-%m-%d') }}</td></tr>{% endfor %}</tbody>
+</table>
+{% endblock %}

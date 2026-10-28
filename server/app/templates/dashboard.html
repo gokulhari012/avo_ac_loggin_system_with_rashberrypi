@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap align-items-center justify-content-between mb-3 gap-2">
+  <h1 class="h4 mb-0">Dashboard</h1>
+  <div class="small text-muted" aria-live="polite">
+    Updated <span id="dash-updated">—</span> · refreshes every {{ data.refresh_s }} s
+    <span id="dash-error" class="badge text-bg-danger d-none">⚠ Server not reachable – data below may be out of date</span>
+  </div>
+</div>
+
+<div class="row g-2 mb-3" id="summary-cards">
+  {% set s = data.summary %}
+  {% for key, label, level in [('nodes_total', 'Registered nodes', 'secondary'), ('nodes_online', 'Nodes online', 'success'),
+                               ('nodes_offline', 'Nodes offline / never connected', 'danger'),
+                               ('controllers_with_faults', 'Controllers reporting faults', 'danger'),
+                               ('controllers_comm_failure', 'Controllers not responding', 'warning'),
+                               ('controllers_stale', 'Stale / node offline', 'warning')] %}
+  <div class="col-6 col-md-4 col-xl-2">
+    <div class="card summary-card border-{{ level }}">
+      <div class="card-body py-2">
+        <div class="summary-value" data-key="{{ key }}">{{ s[key] }}</div>
+        <div class="small text-muted">{{ label }}</div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<h2 class="h6 text-uppercase text-muted">Controllers</h2>
+<noscript><div class="alert alert-warning">JavaScript is required for live updates. Reload the page to refresh.</div></noscript>
+<div class="row g-3 mb-4" id="controller-cards" aria-live="polite"></div>
+
+<h2 class="h6 text-uppercase text-muted">Nodes</h2>
+<div class="table-responsive">
+  <table class="table table-sm table-hover align-middle bg-white" id="node-table">
+    <thead><tr><th>Node</th><th>Site</th><th>Status</th><th>Last contact</th><th>Last upload</th><th>Buffered</th><th>Config</th><th>Software</th><th>Clock</th></tr></thead>
+    <tbody></tbody>
+  </table>
+</div>
+<script type="application/json" id="dashboard-data">{{ data|tojson }}</script>
+<span id="dashboard-config" data-api="{{ url_for('dashboard.dashboard_json') }}" data-refresh="{{ data.refresh_s }}"
+      data-controller-url="{{ url_for('nodes.controller_detail', controller_id=0) }}"
+      data-node-url="{{ url_for('nodes.detail', node_id=0) }}" data-monitor-url="{{ url_for('monitor.index') }}"
+      data-can-nodes="{{ 1 if can('view_nodes') else 0 }}"></span>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>{% endblock %}

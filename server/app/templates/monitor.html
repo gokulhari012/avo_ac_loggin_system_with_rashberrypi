@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Temperature monitoring{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap align-items-end gap-2 mb-3">
+  <h1 class="h4 mb-0 me-3">Temperature monitoring</h1>
+  {% if not choices %}
+    <div class="alert alert-info mb-0">No controllers yet. Register a node and wait for its first readings.</div>
+  {% else %}
+  <div>
+    <label class="form-label small mb-0" for="mon-controller">Controller</label>
+    <select id="mon-controller" class="form-select form-select-sm">
+      {% for c in choices %}<option value="{{ c.id }}" {% if c.id == selected %}selected{% endif %}>{{ c.label }}{% if c.site %} · {{ c.site }}{% endif %}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="btn-group btn-group-sm" role="group" aria-label="Time range" id="mon-ranges">
+    {% for r in ranges %}<button type="button" class="btn btn-outline-primary {% if r == '24h' %}active{% endif %}" data-range="{{ r }}">{{ r }}</button>{% endfor %}
+    <button type="button" class="btn btn-outline-primary" data-range="custom">Custom</button>
+  </div>
+  <div id="mon-custom" class="d-none d-flex gap-1 align-items-end">
+    <div><label class="form-label small mb-0" for="mon-start">From</label><input type="datetime-local" id="mon-start" class="form-control form-control-sm"></div>
+    <div><label class="form-label small mb-0" for="mon-end">To</label><input type="datetime-local" id="mon-end" class="form-control form-control-sm"></div>
+    <button class="btn btn-sm btn-primary" id="mon-apply" type="button">Apply</button>
+  </div>
+  <div class="form-check form-switch ms-2">
+    <input class="form-check-input" type="checkbox" id="mon-auto" checked>
+    <label class="form-check-label small" for="mon-auto">Auto refresh ({{ refresh_s }} s)</label>
+  </div>
+  <a class="btn btn-sm btn-outline-secondary ms-auto" id="mon-logs-link" href="{{ url_for('logs.index') }}">Open in Data Logs</a>
+  {% endif %}
+</div>
+
+{% if choices %}
+<div class="card mb-3">
+  <div class="card-body py-2 d-flex flex-wrap gap-3 align-items-center" id="mon-current" aria-live="polite">Loading…</div>
+</div>
+<div class="row g-2 mb-3" id="mon-stats"></div>
+<div class="card mb-3">
+  <div class="card-body">
+    <div class="small text-muted mb-1" id="mon-chart-note"></div>
+    <div class="chart-box"><canvas id="mon-chart" aria-label="Temperature trend chart" role="img"></canvas></div>
+    <div class="small text-muted mt-1">Line breaks = no data (gap). Red triangles = fault state changes. Grey crosses (bottom) = failed polls. Dashed = set point.</div>
+  </div>
+</div>
+<div class="row g-3">
+  <div class="col-lg-4">
+    <div class="card h-100"><div class="card-header py-2">Communication gaps (calculated)</div>
+      <div class="card-body p-0"><div class="table-responsive scroll-300"><table class="table table-sm mb-0" id="mon-gaps"><thead><tr><th>No data after</th><th>Next data</th><th>Duration</th></tr></thead><tbody></tbody></table></div></div></div>
+  </div>
+  <div class="col-lg-8">
+    <div class="card h-100"><div class="card-header py-2">Latest readings in range (newest first, max 50)</div>
+      <div class="card-body p-0"><div class="table-responsive scroll-300"><table class="table table-sm table-striped mb-0" id="mon-recent">
+        <thead><tr><th>Time</th><th>Temp</th><th>SP</th><th>Comp</th><th>Alarm</th><th>Faults</th><th>Comm</th><th>Quality</th></tr></thead><tbody></tbody></table></div></div></div>
+  </div>
+</div>
+<span id="monitor-config" data-api="{{ url_for('monitor.series') }}" data-refresh="{{ refresh_s }}"
+      data-logs-url="{{ url_for('logs.index') }}"></span>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='vendor/chart.umd.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/monitor.js') }}"></script>
+{% endblock %}

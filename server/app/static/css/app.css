@@ -1,0 +1,29 @@
+:root {
+  --industrial: #1f3a5f;
+  --industrial-dark: #152a45;
+}
+body { background: #f3f5f8; }
+.bg-industrial { background: var(--industrial); }
+.navbar .nav-link.active { font-weight: 600; border-bottom: 2px solid #8fc1ff; }
+
+.summary-card { border-left-width: 4px !important; }
+.summary-value { font-size: 1.6rem; font-weight: 700; line-height: 1.1; }
+
+.ctrl-card .card-header { background: #fff; }
+.ctrl-card .temp-value { font-size: 2.4rem; font-weight: 700; letter-spacing: -0.5px; line-height: 1.1; }
+.ctrl-card.not-live { background: #fafafa; }
+.ctrl-card.not-live .temp-value { color: #8a8f98; text-decoration: line-through dotted 1px; }
+.ctrl-card .state-label { font-size: .75rem; color: #6c757d; text-transform: uppercase; letter-spacing: .03em; }
+.status-badge { font-size: .8rem; }
+
+.chart-box { position: relative; height: 380px; }
+.scroll-300 { max-height: 300px; overflow-y: auto; }
+.scroll-400 { max-height: 420px; overflow-y: auto; }
+.filter-chip { font-weight: 500; }
+.filter-form .form-label { color: #495057; }
+pre { white-space: pre-wrap; word-break: break-word; }
+
+@media (max-width: 576px) {
+  .ctrl-card .temp-value { font-size: 2rem; }
+  .chart-box { height: 280px; }
+}

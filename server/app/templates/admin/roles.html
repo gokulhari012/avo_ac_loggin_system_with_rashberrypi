@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Roles and permissions{% endblock %}
+{% block content %}
+<h1 class="h4">Roles and permissions</h1>
+<p class="small text-muted">Permissions are enforced on the server for every request. Changes are recorded in the audit trail and take effect on the next request.</p>
+<form method="post">
+  {{ form.hidden_tag() }}
+  <div class="table-responsive"><table class="table table-sm bg-white align-middle">
+    <thead class="table-light"><tr><th>Permission</th>{% for r in roles %}<th class="text-center">{{ r.name }}</th>{% endfor %}</tr></thead>
+    <tbody>{% for code, desc in permissions.items() %}<tr>
+      <td><code>{{ code }}</code><div class="small text-muted">{{ desc }}</div></td>
+      {% for r in roles %}<td class="text-center"><input class="form-check-input" type="checkbox" name="perm-{{ r.id }}-{{ code }}" aria-label="{{ r.name }} {{ code }}" {% if code in r.permission_codes() %}checked{% endif %}></td>{% endfor %}
+    </tr>{% endfor %}</tbody>
+  </table></div>
+  <div class="row g-2 align-items-end"><div class="col-md-6"><label class="form-label" for="reason">Reason</label><input class="form-control" id="reason" name="reason" maxlength="500"></div>
+    <div class="col-md-6"><button class="btn btn-primary" type="submit">Save permissions</button></div></div>
+</form>
+{% endblock %}

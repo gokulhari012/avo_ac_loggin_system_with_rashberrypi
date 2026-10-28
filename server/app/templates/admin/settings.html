@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}System settings{% endblock %}
+{% block content %}
+<h1 class="h4">System settings</h1>
+<form method="post" class="card card-body" style="max-width: 900px">
+  {{ form.hidden_tag() }}
+  {% for key, s in settings.items() %}
+  <div class="row mb-3">
+    <label class="col-md-4 col-form-label fw-semibold" for="s-{{ key }}">{{ s.label }}</label>
+    <div class="col-md-8">
+      {% if key == 'remote_control_enabled' %}
+        <div class="form-check form-switch mt-2"><input class="form-check-input" type="checkbox" id="s-{{ key }}" name="{{ key }}" {% if values[key] %}checked{% endif %}>
+          <label class="form-check-label" for="s-{{ key }}">{{ 'Enabled' if values[key] else 'Disabled' }}</label></div>
+      {% else %}
+        <input class="form-control" id="s-{{ key }}" name="{{ key }}" value="{{ values[key] }}">
+      {% endif %}
+      <div class="form-text">{{ s.help }}</div>
+    </div>
+  </div>
+  {% endfor %}
+  <div class="row mb-3"><label class="col-md-4 col-form-label" for="reason">Reason for change</label>
+    <div class="col-md-8"><input class="form-control" id="reason" name="reason" maxlength="500"></div></div>
+  <div><button class="btn btn-primary" type="submit">Save settings</button></div>
+</form>
+{% endblock %}

@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% from "macros.html" import status_badge, sim_badge, onoff_badge %}
+{% block title %}Node {{ node.uid }}{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+  <h1 class="h4 mb-0">{{ node.name or node.uid }} <small class="text-muted">{{ node.uid }}</small></h1>
+  {{ status_badge(status) }} {{ sim_badge(node.simulation) }}
+  {% if not node.enabled %}<span class="badge text-bg-secondary">Disabled – data submissions refused</span>{% endif %}
+  {% if can('manage_nodes') %}
+  <div class="ms-auto d-flex flex-wrap gap-2">
+    <a class="btn btn-sm btn-primary" href="{{ url_for('nodes.edit_config', node_id=node.id) }}">Edit configuration</a>
+    <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#action-test">Test connectivity</button>
+    <button class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#action-token">Issue new token</button>
+    {% if node.enabled %}<button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#action-disable">Disable</button>
+    {% else %}<button class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#action-enable">Enable</button>{% endif %}
+  </div>
+  {% endif %}
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-4">
+    <div class="card h-100"><div class="card-header py-2">Details</div><div class="card-body small">
+      <dl class="row mb-0">
+        <dt class="col-5">Site / location</dt><dd class="col-7">{{ node.site or '—' }} / {{ node.location or '—' }}</dd>
+        <dt class="col-5">Equipment</dt><dd class="col-7">{{ node.equipment or '—' }}</dd>
+        <dt class="col-5">Description</dt><dd class="col-7">{{ node.description or '—' }}</dd>
+        <dt class="col-5">Registered</dt><dd class="col-7">{{ node.created_at|localtime }}</dd>
+        <dt class="col-5">Token</dt><dd class="col-7">…{{ node.token_hint }} (issued {{ node.token_created_at|localtime('%Y-%m-%d') }})</dd>
+        <dt class="col-5">Auth failures</dt><dd class="col-7">{{ node.auth_failures }}{% if node.last_auth_failure_at %} (last {{ node.last_auth_failure_at|localtime }}){% endif %}</dd>
+      </dl>
+    </div></div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card h-100"><div class="card-header py-2">Health (last heartbeat)</div><div class="card-body small">
+      <dl class="row mb-0">
+        <dt class="col-6">Last contact</dt><dd class="col-6">{{ node.last_seen_at|localtime }}</dd>
+        <dt class="col-6">Last heartbeat</dt><dd class="col-6">{{ node.last_heartbeat_at|localtime }}</dd>
+        <dt class="col-6">Last data upload</dt><dd class="col-6">{{ node.last_upload_at|localtime }}</dd>
+        <dt class="col-6">Last good poll</dt><dd class="col-6">{{ node.last_poll_ok_at|localtime }}</dd>
+        <dt class="col-6">Readings buffered</dt><dd class="col-6">{{ node.queue_pending if node.queue_pending is not none else '—' }}</dd>
+        <dt class="col-6">Upload failures (in a row)</dt><dd class="col-6">{{ (hb.get('upload') or {}).get('consecutive_failures', '—') }}</dd>
+        <dt class="col-6">Software</dt><dd class="col-6">{{ node.software_version or '—' }}</dd>
+        <dt class="col-6">Uptime</dt><dd class="col-6">{{ hb.get('uptime_s')|duration if hb.get('uptime_s') else '—' }}</dd>
+        <dt class="col-6">Host / IP</dt><dd class="col-6">{{ node.hostname or '—' }} / {{ node.last_ip or '—' }}</dd>
+        <dt class="col-6">Clock</dt><dd class="col-6">
+          {% if node.clock_synchronized is sameas false %}<span class="badge text-bg-danger">not NTP-synchronised</span>
+          {% elif node.clock_synchronized %}<span class="text-success">synchronised</span>{% else %}unknown{% endif %}
+          {% if node.clock_skew_s is not none and (node.clock_skew_s > 60 or node.clock_skew_s < -60) %}<span class="badge text-bg-warning">skew {{ node.clock_skew_s|round|int }} s</span>{% endif %}</dd>
+        {% set sysm = hb.get('system') or {} %}
+        <dt class="col-6">CPU temp / disk free</dt><dd class="col-6">{{ sysm.get('cpu_temp_c', '—') }} °C / {{ sysm.get('disk_free_mb', '—') }} MB</dd>
+        {% if sysm.get('wifi') %}<dt class="col-6">Wi-Fi signal</dt><dd class="col-6">{{ sysm.wifi.signal_dbm }} dBm ({{ sysm.wifi.interface }})</dd>{% endif %}
+      </dl>
+    </div></div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card h-100"><div class="card-header py-2">Configuration</div><div class="card-body small">
+      <p class="mb-1">Running on node: <b>v{{ node.reported_config_version if node.reported_config_version is not none else '?' }}</b>
+         · Latest on server: <b>v{{ latest.version if latest else '—' }}</b> {% if latest %}({{ latest.status }}){% endif %}</p>
+      {% if node.config_error %}<div class="alert alert-danger py-1 small mb-2">Node reports: {{ node.config_error }}</div>{% endif %}
+      <table class="table table-sm mb-0">
+        <thead><tr><th>Ver.</th><th>Created</th><th>By</th><th>Status</th></tr></thead>
+        <tbody>
+        {% for v in versions %}
+        <tr><td><a href="{{ url_for('nodes.config_version', node_id=node.id, version=v.version) }}">v{{ v.version }}</a></td>
+            <td>{{ v.created_at|localtime('%m-%d %H:%M') }}</td><td>{{ v.created_by.username if v.created_by else 'system' }}</td>
+            <td><span class="badge text-bg-{{ {'applied': 'success', 'rejected': 'danger', 'pending': 'warning', 'delivered': 'info'}.get(v.status, 'secondary') }}">{{ v.status }}</span></td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div></div>
+  </div>
+</div>
+
+<h2 class="h6 mt-4">Controllers</h2>
+<div class="table-responsive"><table class="table table-sm align-middle bg-white">
+  <thead class="table-light"><tr><th>Controller</th><th>Slave</th><th>Status</th><th class="text-end">Temp</th><th class="text-end">SP</th><th>Comp</th><th>Alarm</th><th>Last reading</th><th>Comm (node view)</th></tr></thead>
+  <tbody>
+  {% set hb_ctrls = {} %}{% for c in hb.get('controllers') or [] %}{% set _ = hb_ctrls.update({c.controller_id: c}) %}{% endfor %}
+  {% for c, snap in controllers %}
+  {% set h = hb_ctrls.get(c.uid, {}) %}
+  <tr>
+    <td><a href="{{ url_for('nodes.controller_detail', controller_id=c.id) }}">{{ c.label }}</a> <small class="text-muted">{{ c.uid }}</small>{% if not c.enabled %} <span class="badge text-bg-secondary">disabled</span>{% endif %}{% if c.auto_registered %} <span class="badge text-bg-warning" title="Data received for a controller not in the server configuration">not configured</span>{% endif %}</td>
+    <td>{{ c.slave_id or '—' }}</td>
+    <td>{{ status_badge(snap.status) }}</td>
+    <td class="text-end">{{ c.last_temperature_c|temp }}</td>
+    <td class="text-end">{{ c.last_setpoint_c|temp }}</td>
+    <td>{{ onoff_badge(c.last_compressor_on) }}</td><td>{{ onoff_badge(c.last_alarm_on, 'danger') }}</td>
+    <td>{{ c.last_reading_at|localtime }}</td>
+    <td class="small">{% if h %}{{ h.get('comm_state') }}; fails in a row: {{ h.get('consecutive_failures', 0) }}{% if h.get('last_error') %}<br><span class="text-danger">{{ h.last_error }}</span>{% endif %}{% else %}—{% endif %}</td>
+  </tr>
+  {% else %}<tr><td colspan="9" class="text-muted">No controllers.</td></tr>{% endfor %}
+  </tbody>
+</table></div>
+
+<div class="row g-3">
+  <div class="col-xl-7">
+    <h2 class="h6 mt-2">Recent communication events <a class="small" href="{{ url_for('nodes.events', node=node.id) }}">all</a></h2>
+    <div class="table-responsive scroll-300"><table class="table table-sm bg-white small">
+      <thead><tr><th>Time</th><th>Event</th><th>Severity</th><th>Message</th></tr></thead>
+      <tbody>{% for e in events %}<tr><td class="text-nowrap">{{ e.occurred_at|localtime }}</td><td>{{ e.event_type }}</td>
+        <td><span class="badge text-bg-{{ {'error': 'danger', 'critical': 'danger', 'warning': 'warning'}.get(e.severity, 'secondary') }}">{{ e.severity }}</span></td><td>{{ e.message }}</td></tr>
+      {% else %}<tr><td colspan="4" class="text-muted">None.</td></tr>{% endfor %}</tbody>
+    </table></div>
+  </div>
+  <div class="col-xl-5">
+    <h2 class="h6 mt-2">Commands</h2>
+    <table class="table table-sm bg-white small">
+      <thead><tr><th>Requested</th><th>Controller</th><th>Command</th><th>Status</th></tr></thead>
+      <tbody>{% for c in commands %}<tr><td>{{ c.requested_at|localtime('%m-%d %H:%M') }}</td><td>{{ c.controller.uid }}</td><td>{{ c.command }}</td>
+        <td><span class="badge text-bg-{{ {'succeeded': 'success', 'failed': 'danger', 'rejected': 'warning', 'expired': 'secondary'}.get(c.status, 'info') }}">{{ c.status }}</span>
+        {% if c.result %}<div class="text-muted">{{ c.result.get('error') or ('identity OK' if c.result.get('identity_ok') else '') }}</div>{% endif %}</td></tr>
+      {% else %}<tr><td colspan="4" class="text-muted">None.</td></tr>{% endfor %}</tbody>
+    </table>
+    <h2 class="h6">Heartbeats</h2>
+    <table class="table table-sm bg-white small">
+      <thead><tr><th>Received</th><th>Config</th><th>Buffered</th><th>Upload fails</th></tr></thead>
+      <tbody>{% for h in heartbeats %}<tr><td>{{ h.received_at|localtime }}</td><td>v{{ h.config_version }}</td><td>{{ h.queue_pending if h.queue_pending is not none else '—' }}</td><td>{{ h.upload_failures if h.upload_failures is not none else '—' }}</td></tr>
+      {% else %}<tr><td colspan="4" class="text-muted">None yet.</td></tr>{% endfor %}</tbody>
+    </table>
+  </div>
+</div>
+
+{% if can('manage_nodes') %}
+{% for action, title, text, btn in [
+   ('test', 'Test connectivity', 'Queues a read-only identity check (registers 40001-40005) for every enabled controller. Nothing is written to the controller.', 'primary'),
+   ('token', 'Issue new token', 'The current token stops working immediately. The node will buffer data until the new token is installed on it.', 'warning'),
+   ('disable', 'Disable node', 'The node will be refused when submitting data (it keeps buffering locally). History is kept.', 'danger'),
+   ('enable', 'Enable node', 'The node may submit data again; its buffered readings will be uploaded.', 'success')] %}
+<div class="modal fade" id="action-{{ action }}" tabindex="-1" aria-hidden="true"><div class="modal-dialog"><div class="modal-content">
+  <form method="post" action="{{ url_for('nodes.node_action', node_id=node.id, action=action) }}">
+    <div class="modal-header"><h5 class="modal-title">{{ title }}</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+    <div class="modal-body">
+      {{ reason_form.hidden_tag() }}
+      <p>{{ text }}</p>
+      <label class="form-label" for="reason-{{ action }}">Reason (recorded in the audit trail)</label>
+      <input class="form-control" id="reason-{{ action }}" name="reason" maxlength="500">
+    </div>
+    <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+      <button type="submit" class="btn btn-{{ btn }}">{{ title }}</button></div>
+  </form>
+</div></div></div>
+{% endfor %}
+{% endif %}
+{% endblock %}

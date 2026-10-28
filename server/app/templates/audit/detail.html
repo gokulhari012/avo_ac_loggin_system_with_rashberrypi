@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% from "macros.html" import outcome_badge %}
+{% block title %}Audit event{% endblock %}
+{% block content %}
+<h1 class="h4">Audit event</h1>
+<dl class="row small bg-white border rounded p-2">
+  <dt class="col-sm-2">Event ID</dt><dd class="col-sm-10"><code>{{ e.event_uid }}</code></dd>
+  <dt class="col-sm-2">Time</dt><dd class="col-sm-10">{{ e.occurred_at|localtime }} ({{ e.occurred_at|isoutc }})</dd>
+  <dt class="col-sm-2">Actor</dt><dd class="col-sm-10">{{ e.actor_type }}: {{ e.actor_name }}{% if e.actor_id %} (id {{ e.actor_id }}){% endif %}</dd>
+  <dt class="col-sm-2">Category / action</dt><dd class="col-sm-10">{{ e.category }} / {{ e.action }}</dd>
+  <dt class="col-sm-2">Resource</dt><dd class="col-sm-10">{{ e.resource_type or '—' }} {{ e.resource_id or '' }}</dd>
+  <dt class="col-sm-2">Outcome</dt><dd class="col-sm-10">{{ outcome_badge(e.outcome) }}</dd>
+  <dt class="col-sm-2">Reason</dt><dd class="col-sm-10">{{ e.reason or '—' }}</dd>
+  <dt class="col-sm-2">Source IP</dt><dd class="col-sm-10">{{ e.source_ip or '—' }}</dd>
+  <dt class="col-sm-2">Request ID</dt><dd class="col-sm-10"><code>{{ e.request_id or '—' }}</code></dd>
+</dl>
+<div class="row g-3">
+  <div class="col-lg-4"><h2 class="h6">Previous value</h2><pre class="bg-light border p-2 small">{{ e.previous|pretty or '—' }}</pre></div>
+  <div class="col-lg-4"><h2 class="h6">New value</h2><pre class="bg-white border p-2 small">{{ e.new|pretty or '—' }}</pre></div>
+  <div class="col-lg-4"><h2 class="h6">Details</h2><pre class="bg-white border p-2 small">{{ e.details|pretty or '—' }}</pre></div>
+</div>
+<a href="{{ url_for('audit.index') }}">← audit trail</a>
+{% endblock %}

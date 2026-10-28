@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Node credential{% endblock %}
+{% block content %}
+<h1 class="h4">{{ 'Node registered' if new else 'New token issued' }}: {{ node.uid }}</h1>
+<div class="alert alert-warning">
+  <strong>This token is shown only once.</strong> The server stores only a hash of it. Copy it now. If it is lost, issue a new one from the node page.
+  {% if not new %}The previous token stopped working immediately; the node buffers its data until the new token is installed.{% endif %}
+</div>
+<div class="card mb-3"><div class="card-body">
+  <label class="form-label fw-semibold" for="token">Node token</label>
+  <div class="input-group">
+    <input class="form-control font-monospace" id="token" value="{{ token }}" readonly>
+    <button class="btn btn-outline-primary" type="button" data-copy="#token">Copy</button>
+  </div>
+</div></div>
+<h2 class="h6">Install on the Raspberry Pi</h2>
+<ol class="small">
+  <li>In <code>/etc/temperature-node/config.yaml</code>, set <code>node.id: {{ node.uid }}</code> and <code>server.url</code> to this server's address, e.g. <code>{{ request.host_url.rstrip('/') }}</code>.</li>
+  <li>Put the token in <code>/etc/temperature-node/node.env</code> (readable only by root and the service):
+    <pre class="bg-light p-2 border rounded">TEMP_NODE_TOKEN={{ token }}</pre></li>
+  <li>Restart the service: <code>sudo systemctl restart temperature-node</code>, then watch it with <code>journalctl -u temperature-node -f</code>.</li>
+  <li>The node shows as <b>Online</b> on its page after its first heartbeat; it then fetches its configuration.</li>
+</ol>
+<a class="btn btn-primary" href="{{ url_for('nodes.detail', node_id=node.id) }}">Go to node page</a>
+{% endblock %}

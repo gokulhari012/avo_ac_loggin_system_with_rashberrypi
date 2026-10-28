@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% from "macros.html" import pagination %}
+{% block title %}Communication events{% endblock %}
+{% block content %}
+<h1 class="h4">Communication events</h1>
+<form class="row g-2 mb-2" method="get">
+  <div class="col-auto"><select class="form-select form-select-sm" name="node" aria-label="Node"><option value="">All nodes</option>
+    {% for n in nodes %}<option value="{{ n.id }}" {% if args.node == n.id %}selected{% endif %}>{{ n.uid }}</option>{% endfor %}</select></div>
+  <div class="col-auto"><select class="form-select form-select-sm" name="type" aria-label="Event type"><option value="">All types</option>
+    {% for t in types %}<option {% if args.type == t %}selected{% endif %}>{{ t }}</option>{% endfor %}</select></div>
+  <div class="col-auto"><select class="form-select form-select-sm" name="severity" aria-label="Severity"><option value="">All severities</option>
+    {% for s in ['info', 'warning', 'error', 'critical'] %}<option {% if args.severity == s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select></div>
+  <div class="col-auto"><button class="btn btn-sm btn-primary">Filter</button> <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('nodes.events') }}">Reset</a></div>
+  <div class="col-auto align-self-center small">{{ total }} events</div>
+</form>
+<div class="table-responsive"><table class="table table-sm table-striped bg-white small">
+  <thead><tr><th>Occurred</th><th>Node</th><th>Controller</th><th>Event</th><th>Severity</th><th>Origin</th><th>Message</th><th>Details</th></tr></thead>
+  <tbody>{% for e in rows %}<tr>
+    <td class="text-nowrap">{{ e.occurred_at|localtime }}</td><td>{{ e.node.uid }}</td><td>{{ e.controller.uid if e.controller else '' }}</td>
+    <td>{{ e.event_type }}</td><td>{{ e.severity }}</td><td>{{ e.origin }}</td><td>{{ e.message }}</td>
+    <td><code class="small">{{ e.details_json[:300] if e.details_json else '' }}</code></td></tr>
+  {% else %}<tr><td colspan="8" class="text-muted">No events.</td></tr>{% endfor %}</tbody>
+</table></div>
+{{ pagination(page, pages, 'nodes.events', args) }}
+{% endblock %}

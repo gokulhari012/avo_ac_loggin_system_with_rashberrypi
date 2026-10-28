@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Export {{ r.export_uid[:8] }}{% endblock %}
+{% block content %}
+<h1 class="h4">Export {{ r.export_uid }}</h1>
+<dl class="row small bg-white border rounded p-2">
+  <dt class="col-sm-3">Generated</dt><dd class="col-sm-9">{{ r.created_at|localtime }} by {{ r.username }} from {{ r.source_ip or '—' }}</dd>
+  <dt class="col-sm-3">Completed</dt><dd class="col-sm-9">{{ r.completed_at|localtime }}</dd>
+  <dt class="col-sm-3">Report / format</dt><dd class="col-sm-9">{{ r.report_type }} / {{ r.format }}</dd>
+  <dt class="col-sm-3">Outcome</dt><dd class="col-sm-9">{{ r.outcome }}{% if r.error %} – {{ r.error }}{% endif %}</dd>
+  <dt class="col-sm-3">Records</dt><dd class="col-sm-9">{{ r.record_count if r.record_count is not none else '—' }}</dd>
+  <dt class="col-sm-3">Period</dt><dd class="col-sm-9">{{ r.date_from|localtime }} – {{ r.date_to|localtime }}</dd>
+  <dt class="col-sm-3">File</dt><dd class="col-sm-9">{{ r.file_name or '—' }} ({{ r.file_size or 0 }} bytes)</dd>
+  <dt class="col-sm-3">SHA-256</dt><dd class="col-sm-9"><code>{{ r.sha256 or '—' }}</code></dd>
+</dl>
+<h2 class="h6">Filter criteria</h2>
+<pre class="bg-white border p-2 small">{{ r.filters|pretty }}</pre>
+<a href="{{ url_for('audit.exports') }}">← export history</a>
+{% endblock %}
