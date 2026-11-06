@@ -61,7 +61,7 @@ class Config:
     MAX_CONTENT_LENGTH = _int("MAX_REQUEST_BYTES", 4 * 1024 * 1024)
     LOGIN_MAX_FAILURES = _int("LOGIN_MAX_FAILURES", 5)
     LOGIN_LOCKOUT_MINUTES = _int("LOGIN_LOCKOUT_MINUTES", 15)
-    PASSWORD_MIN_LENGTH = _int("PASSWORD_MIN_LENGTH", 10)
+    PASSWORD_MIN_LENGTH = _int("PASSWORD_MIN_LENGTH", 8)
     TRUST_PROXY = _bool("TRUST_PROXY", False)  # true only behind a reverse proxy (Caddy/IIS)
 
     # Node API
