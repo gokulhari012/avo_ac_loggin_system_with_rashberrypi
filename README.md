@@ -27,6 +27,61 @@ powershell -ExecutionPolicy Bypass -File scripts\start_server.ps1              #
 powershell -ExecutionPolicy Bypass -File scripts\install_windows_service.ps1    # (Administrator) start at boot
 ```
 
+**Ubuntu server** (Ubuntu 22.04 / 24.04; run from the repository root)
+
+```bash
+# 1. Prerequisites
+sudo apt update && sudo apt install -y python3 python3-venv python3-pip git
+
+# 2. Virtual environment + dependencies
+python3 -m venv temperature-logging-system/.venv
+temperature-logging-system/.venv/bin/pip install --upgrade pip
+temperature-logging-system/.venv/bin/pip install -r temperature-logging-system/requirements.txt
+
+# 3. Configuration (random SECRET_KEY, listen on all interfaces, port 8000)
+cp temperature-logging-system/.env.example temperature-logging-system/.env
+SECRET=$(temperature-logging-system/.venv/bin/python -c "import secrets; print(secrets.token_urlsafe(48))")
+sed -i "s|^SECRET_KEY=.*|SECRET_KEY=$SECRET|; s|^HOST=.*|HOST=0.0.0.0|; s|^PORT=.*|PORT=8000|" temperature-logging-system/.env
+chmod 600 temperature-logging-system/.env
+
+# 4. Database, roles and first administrator
+cd temperature-logging-system
+.venv/bin/python -m flask --app run db upgrade
+.venv/bin/python -m flask --app run seed
+.venv/bin/python -m flask --app run create-admin --username admin
+cd ..
+
+# 5. Firewall (LAN access for Raspberry Pi nodes)
+sudo ufw allow 8000/tcp
+
+# 6. Run in the foreground, then open http://<server-ip>:8000
+cd temperature-logging-system && .venv/bin/python run.py
+```
+
+Start at boot with systemd (replace `<user>` and the path with yours):
+
+```bash
+sudo tee /etc/systemd/system/temperature-server.service >/dev/null <<'EOF'
+[Unit]
+Description=Temperature Monitoring Server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=temp
+WorkingDirectory=/home/temp/temperature-logging-system
+ExecStart=/home/temp/temperature-logging-system/.venv/bin/python run.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+sudo systemctl daemon-reload
+sudo systemctl enable --now temperature-server
+sudo systemctl status temperature-server      # logs: journalctl -u temperature-server -f
+```
+
 **Raspberry Pi node** (details: [installation-raspberry-pi.md](docs/installation-raspberry-pi.md))
 1. On the server: **Nodes → Register node** and copy the one-time token.
 2. On the Pi: `sudo bash scripts/setup_raspberry_pi.sh`, then edit `/etc/temperature-node/config.yaml` (node ID, server URL, serial settings) and `/etc/temperature-node/node.env` (token).

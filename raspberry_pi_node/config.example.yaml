@@ -41,7 +41,9 @@ server:
 #     python -m src.validate_controller --port /dev/ttyUSB0 --scan
 buses:
   - name: rs485-1
-    port: /dev/ttyUSB0               # USB RS-485 adapter; /dev/serial0 for a HAT on the GPIO UART
+    # port: /dev/ttyUSB0               # USB RS-485 adapter; /dev/serial0 for a HAT on the GPIO UART
+    # port: /dev/ttySC0               # USB RS-485 adapter; /dev/serial0 for a HAT on the GPIO UART
+    port: /dev/ttySC1               # USB RS-485 adapter; /dev/serial0 for a HAT on the GPIO UART
     baudrate: 9600                   # 9600 | 19200 | 38400  (controller parameter bd = 1 | 2 | 3)
     parity: N                        # N | E | O             (controller parameter PAr = 0 | 1 | 2)
     bytesize: 8                      # fixed by the controller
@@ -49,6 +51,17 @@ buses:
     timeout_s: 1.0                   # response timeout per request
     retries: 2                       # extra attempts after a failed request
     inter_request_delay_ms: 50       # silent time between requests on the bus
+
+  # Second channel of the 2-channel Waveshare HAT.
+  # - name: rs485-2
+  #   port: /dev/ttySC1
+  #   baudrate: 9600
+  #   parity: N
+  #   bytesize: 8
+  #   stopbits: 1
+  #   timeout_s: 1.0
+  #   retries: 2
+  #   inter_request_delay_ms: 50
 
 controllers:
   - id: ctrl-1                       # unique within this node
@@ -64,6 +77,22 @@ controllers:
     register_overrides:
       address_offset: 0              # change ONLY if hardware validation proves an off-by-one
       read_strategy: auto            # auto | block | segments
+
+  - id: ctrl-2
+    name: Cold Room 2 Controller
+    model: SZ-7526TX-REA
+    # bus: rs485-2                     # second HAT channel (/dev/ttySC1)
+    bus: rs485-1                     # second HAT channel (/dev/ttySC1)
+    # slave_id: 1                      # may repeat slave_id 1: it is on a different bus
+    slave_id: 2                      # may repeat slave_id 1: it is on a different bus
+    enabled: true
+    poll_interval_s: 10
+    parameter_read_interval_s: 3600
+    include_raw_registers: true
+    comm_loss_threshold: 3
+    register_overrides:
+      address_offset: 0
+      read_strategy: auto
 
 buffer:
   path: /var/lib/temperature-node/queue.db
