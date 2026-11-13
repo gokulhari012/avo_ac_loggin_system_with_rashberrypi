@@ -244,7 +244,8 @@ class Bit:
 SYSTEM_STATUS_BITS: tuple[Bit, ...] = (
     Bit(0, "power_off", "POWER OFF", "Documented as 'Extra'"),
     Bit(1, "keypad_locked", "KEYPAD LOCK", "1 = keypad locked"),
-    Bit(2, "resolution_tenths", "Resolution_1", "1 = 0.1 degC, 0 = 1 degC (inverse polarity of rS)"),
+    # Bit(2, "resolution_tenths", "Resolution_1", "1 = 0.1 degC, 0 = 1 degC (inverse polarity of rS)"),
+    Bit(2, "resolution_tenths", "Resolution_1", "0 = 0.1 degC, 1 = 1 degC (polarity of rS)"),
     Bit(3, "resolution_2", "Resolution_2", "Documented as 'Extra'"),
     Bit(4, "temperature_unit", "Temperature Unit selection", "Documented as 'Extra'"),
     Bit(5, "defrost", "DEFROST", "1 = defrost ON"),

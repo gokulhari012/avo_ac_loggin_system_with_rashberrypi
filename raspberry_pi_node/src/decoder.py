@@ -200,7 +200,8 @@ def decode_status(regs: Mapping[int, int], *, expected_slave_id: int | None = No
 
     # Cross-checks between independent registers.
     if rs in (0, 1) and "resolution_tenths" in system_flags:
-        tenths_by_rs = rs == 0
+        # tenths_by_rs = rs == 0
+        tenths_by_rs = rs == 1  # rS = 1 means 1 degC, and 0 Means 0.1 degree same as resolution_tenths (40010 bit2).
         if system_flags["resolution_tenths"] != tenths_by_rs:
             quality = _worse(quality, QUALITY_SUSPECT)
             flags.append("resolution_mismatch")
