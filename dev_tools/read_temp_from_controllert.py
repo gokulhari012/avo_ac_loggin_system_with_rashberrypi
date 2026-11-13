@@ -36,6 +36,13 @@ signed = raw - 0x10000 if raw & 0x8000 else raw
 resolution_register = r[9]                 # 40010: 	System Status
 resolution_bit = (resolution_register >> 2) & 1  #Resolution Bit 2: 0 = 1 degC, 1 = 0.1 degC
 
+response = client.read_holding_registers(
+    address=63,
+    count=1,
+    device_id=SLAVE_ID
+)
+set_resolution_register = response.registers[0]  # 40064: Set Resolution Register
+
 if signed == 1001:
     print("Probe fail (low)")
 elif signed == 1002:
@@ -47,3 +54,6 @@ else:
 
 print("Register 40010:", resolution_register)
 print("Resolution Bit 2:", resolution_bit)
+
+print("Set Resolution Register:", set_resolution_register)
+
