@@ -139,6 +139,24 @@ def test_status_comm_failure(client, app):
     assert controller_status(ctrl, node).code == "comm_failure"
 
 
+def test_dashboard_comm_failure_hides_last_good_values(client, app, as_user, users):
+    make_node()
+    ingest(client, [reading(at=utcnow() - timedelta(minutes=10), alarm_on=True), comm_failure(
+        at=utcnow() - timedelta(minutes=5)
+    )])
+    node, ctrl = Node.query.one(), Controller.query.one()
+    node.last_seen_at = utcnow()
+    db.session.commit()
+
+    data = as_user("operator").get("/ui-api/dashboard").json
+    card = data["controllers"][0]
+
+    assert card["status"]["code"] == "comm_failure"
+    assert card["temperature_c"] is None
+    assert card["compressor_on"] is None and card["alarm_on"] is None
+    assert ctrl.last_temperature_c == -18.2  # last good reading remains stored
+
+
 def test_status_probe_fault(client, app):
     ctrl, node = make_ctrl(client, temp=None, quality="probe_fault", faults=["probe_fail_high"], fault_flags=2)
     assert controller_status(ctrl, node).code == "probe_fault"

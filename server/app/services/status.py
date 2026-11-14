@@ -89,12 +89,14 @@ def controller_snapshot(ctrl: Controller, node: Node, now: datetime | None = Non
     now = now or utcnow()
     status = controller_status(ctrl, node, now)
     live = status.code in ("ok", "fault", "suspect")
+    responding = status.code != "comm_failure"
     return {
         "id": ctrl.id, "uid": ctrl.uid, "name": ctrl.label, "node_id": node.id, "node_uid": node.uid,
         "node_name": node.name or node.uid, "site": node.site, "equipment": node.equipment,
         "status": status.to_dict(), "live": live,
-        "temperature_c": ctrl.last_temperature_c, "setpoint_c": ctrl.last_setpoint_c,
-        "compressor_on": ctrl.last_compressor_on, "alarm_on": ctrl.last_alarm_on,
+        "temperature_c": ctrl.last_temperature_c if responding else None, "setpoint_c": ctrl.last_setpoint_c,
+        "compressor_on": ctrl.last_compressor_on if responding else None,
+        "alarm_on": ctrl.last_alarm_on if responding else None,
         "defrost_active": ctrl.last_defrost_active, "faults": ctrl.fault_list,
         "quality": ctrl.last_quality, "comm_status": ctrl.last_comm_status,
         "last_reading_at": iso_utc(ctrl.last_reading_at), "last_good_at": iso_utc(ctrl.last_good_at),
