@@ -85,6 +85,18 @@ def controller_status(ctrl: Controller, node: Node, now: datetime | None = None)
     return Status("ok", "Normal", "success", "✓")
 
 
+def parameter_value(ctrl: Controller, code: str) -> float | None:
+    """Value of one device parameter from the latest snapshot (40031-40068).
+
+    The node decodes temperature parameters per register map note 3 (signed
+    int16, x0.1 when rS = 0, x1 when rS = 1), so the stored value is already
+    in degC; it is None when the snapshot is missing or rS was unknown.
+    """
+    entry = ctrl.parameters.get(code)
+    value = entry.get("value") if isinstance(entry, dict) else None
+    return float(value) if isinstance(value, (int, float)) and not isinstance(value, bool) else None
+
+
 def controller_snapshot(ctrl: Controller, node: Node, now: datetime | None = None) -> dict:
     now = now or utcnow()
     status = controller_status(ctrl, node, now)
@@ -95,6 +107,9 @@ def controller_snapshot(ctrl: Controller, node: Node, now: datetime | None = Non
         "node_name": node.name or node.uid, "site": node.site, "equipment": node.equipment,
         "status": status.to_dict(), "live": live,
         "temperature_c": ctrl.last_temperature_c if responding else None, "setpoint_c": ctrl.last_setpoint_c,
+        # Alarm limits P2 (40033) / P3 (40035): configuration, so the last value read is shown
+        "high_limit_c": parameter_value(ctrl, "P2"), "low_limit_c": parameter_value(ctrl, "P3"),
+        "parameters_read_at": iso_utc(ctrl.parameters_read_at),
         "compressor_on": ctrl.last_compressor_on if responding else None,
         "alarm_on": ctrl.last_alarm_on if responding else None,
         "defrost_active": ctrl.last_defrost_active, "faults": ctrl.fault_list,

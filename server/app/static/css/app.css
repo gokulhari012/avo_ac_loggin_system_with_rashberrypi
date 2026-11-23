@@ -15,6 +15,8 @@ body { background: #f3f5f8; }
 .ctrl-card.not-live .temp-value { color: #8a8f98; text-decoration: line-through dotted 1px; }
 .ctrl-card .state-label { font-size: .75rem; color: #6c757d; text-transform: uppercase; letter-spacing: .03em; }
 .status-badge { font-size: .8rem; }
+.ctrl-card .info-icon { cursor: help; color: #0d6efd; font-size: .8rem; }
+.ctrl-card .info-icon:focus { outline: 1px dotted currentColor; }
 
 .chart-box { position: relative; height: 380px; }
 .scroll-300 { max-height: 300px; overflow-y: auto; }

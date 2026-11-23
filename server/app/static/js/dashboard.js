@@ -8,6 +8,20 @@
 
   function link(template, id) { return template.replace(/0$/, String(id)); }
 
+  const HIGH_LIMIT_INFO = "High temperature limit (controller parameter P2, register 40033). " +
+    "If the current temperature crosses this limit (reaches or goes above it), " +
+    "the controller triggers the high temperature (Ht) alarm.";
+  const LOW_LIMIT_INFO = "Low temperature limit (controller parameter P3, register 40035). " +
+    "If the current temperature crosses this limit (reaches or goes below it), " +
+    "the controller triggers the low temperature (Lt) alarm.";
+
+  function infoIcon(text, c) {
+    const read = c.parameters_read_at ? " Last read from the controller: " + fmtTime(c.parameters_read_at) + "."
+      : " Not read from the controller yet.";
+    const tip = text + read;
+    return ` <span class="info-icon" tabindex="0" role="img" title="${esc(tip)}" aria-label="${esc(tip)}">ⓘ</span>`;
+  }
+
   function controllerCard(c) {
     const s = c.status;
     const noValue = s.code === "probe_fault" || s.code === "invalid";
@@ -42,6 +56,8 @@
             <div class="col-6"><span class="state-label">Set point</span><br>${esc(temp(c.setpoint_c))}</div>
             <div class="col-3"><span class="state-label">Comp.</span><br>${onoff(c.compressor_on)}</div>
             <div class="col-3"><span class="state-label">Alarm</span><br>${onoff(c.alarm_on, "danger")}</div>
+            <div class="col-6"><span class="state-label">High temp limit</span>${infoIcon(HIGH_LIMIT_INFO, c)}<br>${esc(temp(c.high_limit_c))}</div>
+            <div class="col-6"><span class="state-label">Low temp limit</span>${infoIcon(LOW_LIMIT_INFO, c)}<br>${esc(temp(c.low_limit_c))}</div>
           </div>
           <div class="mt-2">${faults}${c.defrost_active ? '<span class="badge text-bg-info">Defrost</span>' : ""}</div>
           ${s.detail && (outdated || noValue) ? `<div class="small text-muted mt-1">${esc(s.detail)}</div>` : ""}

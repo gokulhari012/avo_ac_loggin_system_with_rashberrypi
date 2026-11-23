@@ -157,6 +157,28 @@ def test_dashboard_comm_failure_hides_last_good_values(client, app, as_user, use
     assert ctrl.last_temperature_c == -18.2  # last good reading remains stored
 
 
+def test_dashboard_shows_high_and_low_temperature_limits(client, app, as_user, users):
+    make_node()
+    ingest(client, [reading(at=utcnow() - timedelta(seconds=5))])
+    Node.query.one().last_seen_at = utcnow()
+    db.session.commit()
+
+    card = as_user("operator").get("/ui-api/dashboard").json["controllers"][0]
+    assert card["high_limit_c"] is None and card["low_limit_c"] is None  # no snapshot yet
+
+    event = {"event_id": "6f1d1b8e-7a50-4c39-9a51-2f1f6e0b6c11", "event_type": "parameter_snapshot",
+             "severity": "info", "message": "snap", "controller_id": "ctrl-1", "occurred_at": "2026-01-01T00:00:00Z",
+             "details": {"digest": "d1", "rs": 0, "parameters": {
+                 "P2": {"value": -10.0, "raw": 65436, "reference": 40033},
+                 "P3": {"value": -25.5, "raw": 65281, "reference": 40035}}}}
+    r = client.post("/api/v1/events", json={"events": [event]}, headers=node_headers())
+    assert r.status_code == 200, r.json
+
+    card = as_user("operator").get("/ui-api/dashboard").json["controllers"][0]
+    assert card["high_limit_c"] == -10.0 and card["low_limit_c"] == -25.5
+    assert card["parameters_read_at"]
+
+
 def test_status_probe_fault(client, app):
     ctrl, node = make_ctrl(client, temp=None, quality="probe_fault", faults=["probe_fail_high"], fault_flags=2)
     assert controller_status(ctrl, node).code == "probe_fault"
